@@ -41,9 +41,11 @@ import androidx.compose.ui.unit.TextUnitType
 import com.example.genshin_original_resin_counter.ui.theme.GenshinOriginalResinCounterTheme
 import com.example.genshin_original_resin_counter.util.Timer
 
-/* TODO
-*
-* */
+// TODO Make the timer go down
+// TODO Make UI bigger
+// TODO Add a background
+// TODO Change font
+// TODO Make number o resin more in the sight of the user
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
