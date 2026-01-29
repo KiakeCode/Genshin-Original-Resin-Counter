@@ -1,29 +1,30 @@
 package com.example.genshin_original_resin_counter.util
 
 import android.annotation.SuppressLint
-import android.util.Log
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import kotlin.math.roundToInt
 
 
-@SuppressLint("UnrememberedMutableState")
+const val totalResin = 200 // Genshin current cap
 
-fun Timer(resin: MutableState<String>): MutableState<String> {
-    val r: MutableState<String> = mutableStateOf("${(200 - resin.value.toInt()) * 8}")
-    return mutableStateOf(formatTimer(r))
+fun convertResinInTimeLeftMillis(resin: MutableState<String>): Long {
+    val currentResin = resin.value.toInt() // Conversion value
+    val totalMillisUntilFinished = calculateTimeUntilFinishMillis(value = currentResin)
+    return totalMillisUntilFinished
 }
 
+fun calculateTimeUntilFinishMillis(value: Int): Long {
+    val totalMinutesUntilFinished = (totalResin - value) * 8
+    return (totalMinutesUntilFinished * 1000L * 60) // minutes->*60->seconds->*1000L->milliseconds
+}
 
 @SuppressLint("DefaultLocale")
-fun formatTimer(value: MutableState<String>): String {
-    Log.d("format", value.value.toInt().toString())
-    var seconds = (value.value.toFloat() * 60).roundToInt() % 60
-    var minutes = (value.value.toFloat() % 60).roundToInt()
-    var hours = (value.value.toFloat() / 60).roundToInt()
-    return "${hours}h : ${minutes}m : ${seconds}s"
+fun formatTimeToString(millis: Long): MutableState<String> {
+
+    val totalSeconds = millis / 1000
+
+    val seconds = totalSeconds % 60
+    val minutes = (totalSeconds / 60) % 60
+    val hours = (totalSeconds / 60)/60
+    return mutableStateOf(value = String.format("%02dh : %02dm : %02ds", hours, minutes, seconds))
 }
