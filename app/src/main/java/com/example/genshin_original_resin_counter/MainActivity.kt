@@ -3,6 +3,7 @@ package com.example.genshin_original_resin_counter
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
+import android.webkit.WebSettings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -12,12 +13,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -45,6 +50,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
@@ -58,10 +64,7 @@ import kotlinx.coroutines.delay
 import java.util.Objects
 import kotlin.math.absoluteValue
 
-// TODO Make the timer go down
-// TODO Make UI bigger
 // TODO Add a background
-// TODO Change font
 // TODO Make number o resin more in the sight on the page
 // TODO Make so that resin gets updated when timer goes off by 8 minutes.
 class MainActivity : ComponentActivity() {
@@ -117,14 +120,16 @@ fun App() {
 
 
     @Composable
-    fun UniversalTextSize(): TextUnit = TextUnit(
-        value = textsize, type = TextUnitType.Sp
+    fun UniversalTextSize(textSize: Float = textsize): TextUnit = TextUnit(
+        value = textSize, type = TextUnitType.Sp
     )
+
     @Composable
     fun UniversalTextStyleBold(): TextStyle = TextStyle(
         fontWeight = FontWeight.W900,
         fontSize = UniversalTextSize(),
-        color = MaterialTheme.colorScheme.onPrimaryContainer
+        color = MaterialTheme.colorScheme.onPrimaryContainer,
+        fontFamily = FontFamily(Font(R.font.zhcn))
     )
 
     val borderprop = BorderStroke(1.dp, Color.Red)
@@ -132,25 +137,22 @@ fun App() {
     GenshinOriginalResinCounterTheme {
         Scaffold(
             topBar = {
-                TopAppBar(
+                CenterAlignedTopAppBar(
                     title = {
 
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center,
-                                modifier = Modifier
-                                    .fillMaxWidth()
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
 
                             ) {
-                                GenshinOriginalResinCounterTheme {
+
+                            GenshinOriginalResinCounterTheme {
 
                                 Text(
                                     text = "Original Resin Numbers: ",
                                     fontSize = UniversalTextSize(),
                                     fontWeight = FontWeight.W600
                                 )
-
-
                                 BasicTextField(
                                     value = input,
                                     onValueChange = {
@@ -189,6 +191,7 @@ fun App() {
                                     fontWeight = FontWeight.W600
                                 )
                             }
+
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -196,17 +199,25 @@ fun App() {
                         titleContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     ),
                 )
+
             }) { e ->
             Column(
                 Modifier
                     .padding(paddingValues = e)
-                    .fillMaxWidth()
+                    .fillMaxSize(),
+                verticalArrangement = Arrangement.Center
             ) {
-                Text(text = formatTimeToString(millisCounter).value, fontSize = UniversalTextSize())
+                Text(
+                    text = formatTimeToString(millisCounter).value,
+                    fontSize = UniversalTextSize(textsize+4f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.size(120.dp))
                 Text(
 //                    text = "Click the top number in WHITE to update the timer!",
                     text = buildAnnotatedString {
-                        append("Click the ")
+                        append("Tap the ")
 
                         withStyle(
                             SpanStyle(
@@ -216,11 +227,15 @@ fun App() {
                                 fontFamily = FontFamily(Font(R.font.zhcn))
                             )
                         ) {
-                            append("top number")
+                            append("resin number")
                         }
 
                         append(" to update the timer!")
-                    }, fontSize = UniversalTextSize()
+                    },
+                    fontSize = UniversalTextSize(),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+
                 )
 
             }
