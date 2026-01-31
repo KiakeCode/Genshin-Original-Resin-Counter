@@ -3,9 +3,12 @@ package com.example.genshin_original_resin_counter
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
+import android.webkit.WebSettings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -24,9 +27,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.currentRecomposeScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +39,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -51,11 +58,12 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
 import com.example.genshin_original_resin_counter.ui.theme.GenshinOriginalResinCounterTheme
-import com.example.genshin_original_resin_counter.ui.theme.blue
 import com.example.genshin_original_resin_counter.util.convertResinInTimeLeftMillis
 import com.example.genshin_original_resin_counter.util.formatTimeToString
+import com.example.genshin_original_resin_counter.util.validateInput
 import kotlinx.coroutines.delay
-
+import java.util.Objects
+import kotlin.math.absoluteValue
 
 // TODO Add a background
 // TODO Make number o resin more in the sight on the page
@@ -75,41 +83,34 @@ class MainActivity : ComponentActivity() {
 @Composable
 @Preview
 fun App() {
+//    val borderprop = BorderStroke(1.dp, Color.Red)
+    var textsize = 17f
+    var focusManager = LocalFocusManager.current
+
     var totalMillis by remember {
         mutableLongStateOf(0L)
     }
     var millisCounter by remember {
         mutableLongStateOf(totalMillis)
     }
-
     var input by remember {
         mutableStateOf("0")
     }
-    val textsize = 17f
 
-    var timerText by remember { mutableStateOf(formatTimeToString(0L)) }
-
-    val focusManager = LocalFocusManager.current
 
     LaunchedEffect(key1 = totalMillis) {
         while (millisCounter > 0) {
             delay(1000L)
-            // check if focusmanager is trying to change value before updating this
             millisCounter -= 1000L
-//            millisCounter -= 8L * 3000L
             if (millisCounter % (8L * 60L * 1000L) == 0L) {
-                Log.d("RESIN UPDATE", "+8 min passed")
                 try {
-                    input = (input.toInt() + 1).toString()
+                    input = validateInput((input.toInt() + 1).toString(), input)
                 } catch (e: Error) {
                     input = "0"
-                    Log.d("erorrr", e.toString())
+                    Log.d("Err", "${e.printStackTrace()}")
                 }
-
             }
-            timerText = formatTimeToString(millisCounter)
         }
-        timerText = formatTimeToString(0L)
     }
 
 
@@ -123,11 +124,10 @@ fun App() {
     fun UniversalTextStyleBold(): TextStyle = TextStyle(
         fontWeight = FontWeight.W900,
         fontSize = UniversalTextSize(),
-        color = blue,
+        color = MaterialTheme.colorScheme.onPrimaryContainer,
         fontFamily = FontFamily(Font(R.font.zhcn))
     )
 
-//    val borderprop = BorderStroke(1.dp, Color.Red)
 
     GenshinOriginalResinCounterTheme {
         Scaffold(
@@ -151,23 +151,7 @@ fun App() {
                                 BasicTextField(
                                     value = input,
                                     onValueChange = {
-                                        input =
-                                            if (input.contains("^0".toRegex())) {
-                                                it.replace(regex = "^0".toRegex(), replacement = "")
-                                            } else if (input.length == 3 && it.length > 3) input
-                                            else if (it.isNotEmpty() && it.toInt() > 200) "200"
-                                            else it
-
-                                        if (input.isEmpty()) input = "0"
-
-                                        // The timer updates
-                                        totalMillis = convertResinInTimeLeftMillis(
-                                            resin = mutableStateOf(
-                                                value = input
-                                            )
-                                        )
-                                        millisCounter = totalMillis
-
+                                        input = validateInput(input, it)
                                     },
                                     keyboardOptions = KeyboardOptions(
                                         keyboardType = KeyboardType.NumberPassword,
@@ -176,6 +160,15 @@ fun App() {
                                     maxLines = 1,
                                     modifier = Modifier.width(IntrinsicSize.Min),
                                     keyboardActions = KeyboardActions(onNext = {
+                                        if (input.isEmpty()) input = "0"
+                                        // The timer updates
+                                        totalMillis = convertResinInTimeLeftMillis(
+                                            resin = mutableStateOf(
+                                                value = input
+                                            )
+                                        )
+                                        millisCounter = totalMillis
+
                                         focusManager.clearFocus(
                                             force = true
                                         )
@@ -192,8 +185,8 @@ fun App() {
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        titleContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     ),
                 )
 
@@ -205,7 +198,7 @@ fun App() {
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = timerText.value,
+                    text = formatTimeToString(millisCounter).value,
                     fontSize = UniversalTextSize(textsize + 4f),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
@@ -239,3 +232,4 @@ fun App() {
         }
     }
 }
+
