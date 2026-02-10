@@ -143,14 +143,13 @@ fun App(current: Context) {
     LaunchedEffect(Unit) {
         readResin(current).collect {
             input = it
-        }
-        totalMillis = convertResinInTimeLeftMillis(
-            resin = mutableStateOf(
-                value = input
+            totalMillis = convertResinInTimeLeftMillis(
+                resin = mutableStateOf(
+                    value = input
+                )
             )
-        )
-
-        millisCounter = totalMillis
+            millisCounter = totalMillis
+        }
     }
 
 
