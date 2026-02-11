@@ -1,14 +1,17 @@
 package com.example.genshin_original_resin_counter
 
+import android.Manifest.permission
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -38,8 +41,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.SpanStyle
@@ -53,31 +54,34 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.genshin_original_resin_counter.`class`.NotificationTimer
 import com.example.genshin_original_resin_counter.ui.theme.GenshinOriginalResinCounterTheme
 import com.example.genshin_original_resin_counter.ui.theme.blue
+import com.example.genshin_original_resin_counter.util.MessagesInterface
 import com.example.genshin_original_resin_counter.util.convertResinInTimeLeftMillis
 import com.example.genshin_original_resin_counter.util.formatTimeToString
 import com.example.genshin_original_resin_counter.util.validateInput
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import java.security.Permission
+import java.util.Date
+import java.util.jar.Manifest
 
-// TODO Add a background
 // TODO Make number o resin more in the sight on the page
 
 val Context.dataStore by preferencesDataStore(name = "counters")
 
 val RESIN = stringPreferencesKey("RESIN")
+val TIME_SAVED = stringPreferencesKey(name = "TIME_SAVED")
 
 suspend fun saveResin(context: Context, value: String) {
     context.dataStore.edit { preferences ->
@@ -85,20 +89,45 @@ suspend fun saveResin(context: Context, value: String) {
     }
 }
 
+suspend fun saveTime(context: Context, value: Date) {
+    context.dataStore.edit { preferences ->
+        preferences[TIME_SAVED] = value.toString()
+    }
+}
+
 suspend fun readResin(context: Context): Flow<String> =
     context.dataStore.data.map { preferences -> preferences[RESIN] ?: "0" }
 
+fun readTime(context: Context): Flow<String> = context.dataStore.data.map { preferences ->
+    preferences[TIME_SAVED] ?: System.currentTimeMillis().toString()
+}
+
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        checkNotificationPermissionAtFirstStart()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             App(LocalContext.current)
         }
     }
+
+    private fun checkNotificationPermissionAtFirstStart() {
+        val requestPermissionLauncher =
+            registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this, permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                requestPermissionLauncher.launch(permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
 }
 
-@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter", "MissingPermission")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun App(current: Context) {
@@ -125,10 +154,8 @@ fun App(current: Context) {
         while (millisCounter > 0) {
             delay(1000L)
             millisCounter -= 1000L
-//            millisCounter -= 8L * 60L * 1000L
             if (millisCounter % (8L * 60L * 1000L) == 0L) {
                 try {
-//                    Log.d("validateInput", validateInput(input, (input.toInt() + 1).toString()))
                     input = validateInput(input, (input.toInt() + 1).toString())
                     scope.launch { saveResin(current, input) }
 
@@ -199,6 +226,10 @@ fun App(current: Context) {
                                     maxLines = 1,
                                     modifier = Modifier.width(IntrinsicSize.Min),
                                     keyboardActions = KeyboardActions(onNext = {
+                                        NotificationTimer().showNotification(
+                                            current = current,
+                                            message = MessagesInterface.NOTIFICATION_FULL
+                                        )
                                         if (input.isEmpty()) input = "0"
                                         // The timer updates
                                         totalMillis = convertResinInTimeLeftMillis(
@@ -250,7 +281,6 @@ fun App(current: Context) {
                 )
                 Spacer(Modifier.size(120.dp))
                 Text(
-//                    text = "Click the top number in WHITE to update the timer!",
                     text = buildAnnotatedString {
                         append("Tap the ")
 
@@ -272,9 +302,11 @@ fun App(current: Context) {
                     modifier = Modifier.fillMaxWidth()
 
                 )
-
             }
         }
     }
 }
+
+
+
 
