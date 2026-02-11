@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">Resin Counter</string>
+    <string name="channel_name">Original Resin Counter</string>
+    <string name="notification_full">Your original resin are full! Log-in to use them!</string>
+    <string name="notification_almost_finished">Your resin are almost full! Get ready to Log-in</string>
+    <string name="notification_header">Original Resin Counter</string>
+
 </resources>
