@@ -59,48 +59,46 @@ import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.genshin_original_resin_counter.`class`.NotificationTimer
 import com.example.genshin_original_resin_counter.ui.theme.GenshinOriginalResinCounterTheme
 import com.example.genshin_original_resin_counter.ui.theme.blue
 import com.example.genshin_original_resin_counter.util.MessagesInterface
+import com.example.genshin_original_resin_counter.util.calculateResinToAdd
 import com.example.genshin_original_resin_counter.util.convertResinInTimeLeftMillis
 import com.example.genshin_original_resin_counter.util.formatTimeToString
 import com.example.genshin_original_resin_counter.util.validateInput
+import com.example.genshin_original_resin_counter.util.validateInputFromDataStore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import java.security.Permission
-import java.util.Date
-import java.util.jar.Manifest
 
 // TODO Make number o resin more in the sight on the page
 
 val Context.dataStore by preferencesDataStore(name = "counters")
 
 val RESIN = stringPreferencesKey("RESIN")
-val TIME_SAVED = stringPreferencesKey(name = "TIME_SAVED")
+val TIME_SAVED = longPreferencesKey(name = "TIME_SAVED")
 
 suspend fun saveResin(context: Context, value: String) {
     context.dataStore.edit { preferences ->
         preferences[RESIN] = value
+        preferences[TIME_SAVED] = System.currentTimeMillis()
     }
 }
 
-suspend fun saveTime(context: Context, value: Date) {
-    context.dataStore.edit { preferences ->
-        preferences[TIME_SAVED] = value.toString()
-    }
-}
 
 suspend fun readResin(context: Context): Flow<String> =
     context.dataStore.data.map { preferences -> preferences[RESIN] ?: "0" }
 
-fun readTime(context: Context): Flow<String> = context.dataStore.data.map { preferences ->
-    preferences[TIME_SAVED] ?: System.currentTimeMillis().toString()
-}
+suspend fun readTimeSaved(context: Context): Flow<Long> =
+    context.dataStore.data.map { preferences ->
+        preferences[TIME_SAVED] ?: System.currentTimeMillis()
+    }
 
 
 class MainActivity : ComponentActivity() {
@@ -133,8 +131,8 @@ class MainActivity : ComponentActivity() {
 fun App(current: Context) {
 //    val borderprop = BorderStroke(1.dp, Color.Red)
 
-    var textsize = 17f
-    var focusManager = LocalFocusManager.current
+    val textsize = 17f
+    val focusManager = LocalFocusManager.current
 
     var totalMillis by remember {
         mutableLongStateOf(0L)
@@ -145,7 +143,7 @@ fun App(current: Context) {
     var input by remember {
         mutableStateOf("")
     }
-    var scope = rememberCoroutineScope()
+    val scope = rememberCoroutineScope()
 
 
 
@@ -157,7 +155,9 @@ fun App(current: Context) {
             if (millisCounter % (8L * 60L * 1000L) == 0L) {
                 try {
                     input = validateInput(input, (input.toInt() + 1).toString())
-                    scope.launch { saveResin(current, input) }
+                    scope.launch {
+                        saveResin(current, input)
+                    }
 
                 } catch (e: Error) {
                     input = "0"
@@ -165,18 +165,55 @@ fun App(current: Context) {
                 }
             }
         }
+        NotificationTimer().showNotification(
+            current = current,
+            message = MessagesInterface.NOTIFICATION_FULL
+        )
     }
 
     LaunchedEffect(Unit) {
-        readResin(current).collect {
-            input = it
-            totalMillis = convertResinInTimeLeftMillis(
-                resin = mutableStateOf(
-                    value = input
+        Log.d("here", "here")
+        combine(
+            readTimeSaved(current), readResin(current)
+        ) { oldTime, resin ->
+            oldTime to resin
+        }.collect { (oldTime, resin) ->
+
+            // Setting resins
+            input = validateInputFromDataStore(
+                input, calculateResinToAdd(
+                    oldTime = oldTime,
+                    currentTime = System.currentTimeMillis(),
+                    resin = resin,
                 )
             )
+
+            // Setting time on screen
+            totalMillis = convertResinInTimeLeftMillis(
+                resin = mutableStateOf(value = input)
+            ) - if (input.toInt() != 200) (System.currentTimeMillis() - oldTime) else 0
             millisCounter = totalMillis
         }
+//        var oldTime = 0L
+//        launch {
+//            readTimeSaved(current).collect { oldTime = it }
+//        }
+//        launch {
+//            readResin(current).collect {
+//                Log.d("oldTime", "${System.currentTimeMillis() - oldTime}")
+//                input = validateInput(
+//                    input, calculateResinToAdd(oldTime = oldTime, System.currentTimeMillis(), it)
+//                )
+//
+//
+//                totalMillis = convertResinInTimeLeftMillis(
+//                    resin = mutableStateOf(
+//                        value = input
+//                    )
+//                )
+//                millisCounter = totalMillis
+//            }
+//        }
     }
 
 
@@ -226,25 +263,22 @@ fun App(current: Context) {
                                     maxLines = 1,
                                     modifier = Modifier.width(IntrinsicSize.Min),
                                     keyboardActions = KeyboardActions(onNext = {
-                                        NotificationTimer().showNotification(
-                                            current = current,
-                                            message = MessagesInterface.NOTIFICATION_FULL
-                                        )
+
+
+                                        // Checking Empty Input
                                         if (input.isEmpty()) input = "0"
+
                                         // The timer updates
                                         totalMillis = convertResinInTimeLeftMillis(
-                                            resin = mutableStateOf(
-                                                value = input
-                                            )
+                                            resin = mutableStateOf(value = input)
                                         )
                                         millisCounter = totalMillis
-                                        scope.launch {
-                                            saveResin(current, input)
-                                        }
 
-                                        focusManager.clearFocus(
-                                            force = true
-                                        )
+                                        // Saving Resin and Timestamp
+                                        scope.launch { saveResin(current, input) }
+
+                                        // Removing Focus from the BasicTextField
+                                        focusManager.clearFocus(force = true)
                                     }),
                                     textStyle = UniversalTextStyleBold()
                                 )
@@ -306,6 +340,8 @@ fun App(current: Context) {
         }
     }
 }
+
+
 
 
 

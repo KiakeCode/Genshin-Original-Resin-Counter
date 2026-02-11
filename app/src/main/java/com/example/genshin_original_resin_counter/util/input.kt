@@ -7,3 +7,8 @@ fun validateInput(input: String, string: String): String =
     else if (input.length == 3 && string.length > 3) input
     else if (string.isNotEmpty() && string.toInt() > 200) "200"
     else string
+
+fun validateInputFromDataStore(input: String, string: String): String =
+    if (input.length == 3 && string.length > 3) input
+    else if (string.isNotEmpty() && string.toInt() > 200) "200"
+    else string

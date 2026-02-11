@@ -25,6 +25,14 @@ fun formatTimeToString(millis: Long): MutableState<String> {
 
     val seconds = totalSeconds % 60
     val minutes = (totalSeconds / 60) % 60
-    val hours = (totalSeconds / 60)/60
+    val hours = (totalSeconds / 60) / 60
     return mutableStateOf(value = String.format("%02dh : %02dm : %02ds", hours, minutes, seconds))
+}
+
+fun calculateResinToAdd(oldTime: Long, currentTime: Long, resin: String): String {
+    val timeDiff = currentTime - oldTime
+
+    val resinToAdd = (timeDiff / (8L * 60L * 1000L)).toInt()
+
+    return (resin.toInt() + resinToAdd).toString()
 }
