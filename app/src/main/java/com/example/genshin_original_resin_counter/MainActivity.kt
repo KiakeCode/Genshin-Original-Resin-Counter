@@ -29,6 +29,8 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -144,15 +146,16 @@ fun App(current: Context) {
         mutableStateOf("")
     }
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
 
 
     LaunchedEffect(key1 = totalMillis) {
 
         while (millisCounter > 0) {
-            delay(1000L)
             millisCounter -= 1000L
             if (millisCounter % (8L * 60L * 1000L) == 0L) {
+                Log.d("add+1 resin","added resin")
                 try {
                     input = validateInput(input, (input.toInt() + 1).toString())
                     scope.launch {
@@ -164,11 +167,17 @@ fun App(current: Context) {
                     Log.d("Err", e.toString())
                 }
             }
+            Log.d("time", millisCounter.toString())
+            delay(1000L)
         }
-        NotificationTimer().showNotification(
-            current = current,
-            message = MessagesInterface.NOTIFICATION_FULL
-        )
+        if (millisCounter == 0L && input.isNotEmpty() && input.toInt() == 200) {
+            snackbarHostState.showSnackbar(
+                MessagesInterface.NOTIFICATION_FULL, withDismissAction = true
+            )
+            NotificationTimer().showNotification(
+                current = current, message = MessagesInterface.NOTIFICATION_FULL
+            )
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -189,31 +198,15 @@ fun App(current: Context) {
             )
 
             // Setting time on screen
-            totalMillis = convertResinInTimeLeftMillis(
+            val convertedTime = convertResinInTimeLeftMillis(
                 resin = mutableStateOf(value = input)
-            ) - if (input.toInt() != 200) (System.currentTimeMillis() - oldTime) else 0
+            )
+            val timeDifference = System.currentTimeMillis() - oldTime
+            val totalMillisToRound =
+                convertedTime - if (input.toInt() != 200) (timeDifference) else 0
+            totalMillis = totalMillisToRound - (totalMillisToRound % 1000)
             millisCounter = totalMillis
         }
-//        var oldTime = 0L
-//        launch {
-//            readTimeSaved(current).collect { oldTime = it }
-//        }
-//        launch {
-//            readResin(current).collect {
-//                Log.d("oldTime", "${System.currentTimeMillis() - oldTime}")
-//                input = validateInput(
-//                    input, calculateResinToAdd(oldTime = oldTime, System.currentTimeMillis(), it)
-//                )
-//
-//
-//                totalMillis = convertResinInTimeLeftMillis(
-//                    resin = mutableStateOf(
-//                        value = input
-//                    )
-//                )
-//                millisCounter = totalMillis
-//            }
-//        }
     }
 
 
@@ -230,10 +223,15 @@ fun App(current: Context) {
         color = blue,
         fontFamily = FontFamily(Font(R.font.zhcn))
     )
-
+//86025767
+//86025000
 
     GenshinOriginalResinCounterTheme {
+
         Scaffold(
+            snackbarHost = {
+                SnackbarHost(snackbarHostState)
+            },
             topBar = {
                 CenterAlignedTopAppBar(
                     title = {
