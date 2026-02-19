@@ -204,7 +204,7 @@ fun App(current: Context) {
             val timeDifference = System.currentTimeMillis() - oldTime
             val totalMillisToRound =
                 convertedTime - if (input.toInt() != 200) (timeDifference) else 0
-            totalMillis = totalMillisToRound - (totalMillisToRound % 1000)
+            totalMillis = totalMillisToRound - (totalMillisToRound % 1000) // Removing extra 3 numbers from the millis
             millisCounter = totalMillis
         }
     }

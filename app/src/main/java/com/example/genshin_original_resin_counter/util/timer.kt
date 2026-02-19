@@ -9,8 +9,7 @@ const val totalResin = 200 // Genshin current cap
 
 fun convertResinInTimeLeftMillis(resin: MutableState<String>): Long {
     val currentResin = resin.value.toInt() // Conversion value
-    val totalMillisUntilFinished = calculateTimeUntilFinishMillis(value = currentResin)
-    return totalMillisUntilFinished
+    return calculateTimeUntilFinishMillis(value = currentResin)
 }
 
 fun calculateTimeUntilFinishMillis(value: Int): Long {
